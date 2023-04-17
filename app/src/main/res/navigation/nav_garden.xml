@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_garden.xml"
+    app:startDestination="@id/view_pager_fragment">
+
+    <fragment
+        android:id="@+id/view_pager_fragment"
+        android:name="com.antwhale.sunflower.HomeViewPagerFragment"
+        android:label="HomeViewPagerFragment"
+        tools:layout="@layout/fragment_view_pager">
+
+
+        <action
+            android:id="@+id/action_view_pager_fragment_to_plantDetailFragment"
+            app:destination="@id/plant_detail_fragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/plant_detail_fragment"
+        android:name="com.antwhale.sunflower.PlantDetailFragment"
+        android:label="@string/plant_details_title"
+        tools:layout="@layout/fragment_plant_detail">
+
+        <argument
+            android:name="plantId"
+            app:argType="string"/>
+
+        <action
+            android:id="@+id/action_plant_detail_fragment_to_galleryFragment"
+            app:destination="@id/galleryFragment" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/galleryFragment"
+        android:name="com.antwhale.sunflower.GalleryFragment"
+        android:label="GalleryFragment" >
+
+        <argument
+            android:name="plantName"
+            app:argType="string" />
+
+    </fragment>
+
+</navigation>
