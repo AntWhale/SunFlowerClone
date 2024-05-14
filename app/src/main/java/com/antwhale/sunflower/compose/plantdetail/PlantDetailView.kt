@@ -1,5 +1,6 @@
 package com.antwhale.sunflower.compose.plantdetail
 
+import android.graphics.drawable.Drawable
 import android.text.Layout.Alignment
 import android.text.method.LinkMovementMethod
 import androidx.compose.animation.core.Spring
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -24,12 +26,16 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.Colors
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,9 +48,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
@@ -54,17 +62,24 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidViewBinding
+import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.text.HtmlCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.antwhale.sunflower.R
 import com.antwhale.sunflower.compose.Dimens
+import com.antwhale.sunflower.compose.utils.SunflowerImage
 import com.antwhale.sunflower.compose.utils.TextSnackbarContainer
 import com.antwhale.sunflower.compose.visible
 import com.antwhale.sunflower.data.Plant
 import com.antwhale.sunflower.databinding.ItemPlantDescriptionBinding
 import com.antwhale.sunflower.viewmodels.PlantDetailViewModel
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import org.openjdk.javax.tools.Tool
 import java.lang.reflect.Modifier
 
@@ -195,6 +210,137 @@ fun PlantDetails(
             toolbarState, plant.name, callbacks,
             toolbarAlpha = { toolbarAlpha.value },
             contentAlpha = { contentAlpha.value }
+        )
+    }
+}
+
+@Composable
+private fun PlantsDetailsContent(
+    scrollState: ScrollState,
+    toolbarState: ToolbarState,
+    plant: Plant,
+    isPlanted: Boolean,
+    hasValidUnsplashKey: Boolean,
+    imageHeight: Dp,
+    onNamePosition: (Float) -> Unit,
+    onFabClick: () -> Unit,
+    onGalleryClick: () -> Unit,
+    contentAlpha: () -> Float
+) {
+    Column(androidx.compose.ui.Modifier.verticalScroll(scrollState)) {
+        ConstraintLayout {
+            val (image, fab, info) = createRefs()
+
+            PlantImage(
+                imageUrl = plant.imageUrl,
+                imageHeight = imageHeight,
+                modifier = androidx.compose.ui.Modifier
+                    .constrainAs(image) { top.linkTo(parent.top) }
+                    .alpha(contentAlpha())
+            )
+
+            if(!isPlanted) {
+                val fabEndMargin = Dimens.PaddingSmall
+                PlantFab(
+                    onFabClick = onFabClick,
+                    modifier = androidx.compose.ui.Modifier
+                        .constrainAs(fab) {
+                            centerAround(image.bottom)
+                            absoluteRight.linkTo(
+                                parent.absoluteRight,
+                                margin = fabEndMargin
+                            )
+                        }
+                        .alpha(contentAlpha())
+                )
+            }
+
+            PlantInformation(
+                name = plant.name,
+                wateringInterval = plant.wateringInterval,
+                description = plant.description,
+                hasValidUnsplashKey = hasValidUnsplashKey,
+                onNamePosition = { onNamePosition(it) },
+                toolbarState = toolbarState,
+                onGalleryClick = onGalleryClick,
+                modifier = androidx.compose.ui.Modifier.constrainAs(info) {
+                    top.linkTo(image.bottom)
+                }
+
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlantImage(
+    imageUrl: String,
+    imageHeight: Dp,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+    placeholderColor: Color = MaterialTheme.colorScheme.onSurface.copy(0.2f)
+    ) {
+    var isLoading by remember { mutableStateOf(true) }
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(imageHeight)
+    ) {
+        if(isLoading) {
+            Box(
+                androidx.compose.ui.Modifier
+                    .fillMaxSize()
+                    .background(placeholderColor)
+            )
+        }
+        SunflowerImage(
+            model = imageUrl,
+            contentDescription = null,
+            modifier = androidx.compose.ui.Modifier
+                .fillMaxSize(),
+            contentScale = ContentScale.Crop
+        ) {
+            it.addListener(object : RequestListener<Drawable> {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Drawable>?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    isLoading = false
+                    return false
+                }
+
+                override fun onResourceReady(
+                    resource: Drawable?,
+                    model: Any?,
+                    target: Target<Drawable>?,
+                    dataSource: DataSource?,
+                    isFirstResource: Boolean
+                ): Boolean {
+                    isLoading = false
+                    return false
+                }
+            })
+        }
+    }
+}
+
+@Composable
+private fun PlantFab(
+    onFabClick: () -> Unit,
+    modifier : androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
+) {
+    val addPlantContentDescription = stringResource(R.string.add_plant)
+    FloatingActionButton(
+        onClick = onFabClick,
+        shape = MaterialTheme.shapes.small,
+        modifier = modifier.semantics {
+            contentDescription = addPlantContentDescription
+        }
+    ) {
+        Icon(
+            Icons.Filled.Add,
+            contentDescription = null
         )
     }
 }
